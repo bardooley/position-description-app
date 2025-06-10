@@ -1,0 +1,834 @@
+from lib2to3.pytree import convert
+import PyPDF2
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.units import inch
+import requests
+import os
+from PIL import Image as PILImage
+from io import BytesIO
+import json
+from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from PIL import Image as PILImage
+from io import BytesIO
+import os
+# import openai
+# api_key = os.environ.get("OPENAI_API_KEY")
+# client = openai.OpenAI(api_key=api_key)
+
+
+# Prompt the user for school information
+#school_name = input("Enter the school name: ")
+#position_name = input("Enter the position name: ")
+#notes_file = input("Enter the name of the file containing your notes on the school: ")
+#location = input("Enter the location of the school: ")
+#website = input("Enter the website of the school: ")
+#date = input("Enter the start date of this position (Example: June 2026. May 2027.):  ")
+#consultant_name = input("Enter the name of the consultant in charge of this search: ")
+#consultant_email = input("Enter the email of the consultant in charge of this search: ")
+
+school_name = "Hong Kong International School"
+position_name = "Head of School"
+notes_file = "GS_notes.pdf"
+location = "Providence, RI"
+website = "https://www.gordonschool.org/"
+date = "July 2026"
+consultant_name = "Jim Shwartz"
+consultant_email = "jim.shwartz@carneysandoe.com"
+mission_statement = "Child by child, the Gordon School community cultivates successful students by inspiring joyful learning, encouraging intellectual leadership, fostering an empathic spirit and stimulating a drive for positive societal impact."
+try:
+    with open(f'Draft 5/{notes_file}', 'r') as file:
+        notes_content = file.read()
+    print(f"\nSuccessfully read notes from {notes_file}")
+    print(f"Notes preview: {notes_content[:100]}..." if len(notes_content) > 100 else f"Notes: {notes_content}")
+except FileNotFoundError:
+    print(f"\nError: The file '{notes_file}' was not found in the Draft 5 folder.")
+    notes_content = ""
+except Exception as e:
+    #print(f"\nError reading the file: {str(e)}")
+    notes_content = ""
+
+
+    # Check if the file is a PDF
+if notes_file.lower().endswith('.pdf'):
+    # Open the PDF file
+    with open(f'Draft 5/{notes_file}', 'rb') as file:
+        # Create a PDF reader object
+        pdf_reader = PyPDF2.PdfReader(file)
+                
+        # Extract text from all pages
+        notes_content = ""
+        for page in pdf_reader.pages:
+                notes_content += page.extract_text()
+                    
+    print(f"\nSuccessfully read PDF notes from {notes_file}")
+    #print(f"Notes preview: {notes_content[:100]}..." if len(notes_content) > 100 else f"Notes: {notes_content}")
+    
+import openai
+api_key = os.environ.get("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=api_key)
+
+
+response = client.chat.completions.create(
+        model="gpt-4.1-nano",
+            messages=[
+                    {"role": "system", "content": f"""You are an experienced HR professional crafting the 'Overview' section of a Position Description for a leadership role at an independent school. This is the first section job applicants will see.
+
+Write in a warm, professional tone. The overview should be about 300 words, split into three paragraphs:
+1. A brief history of the school and its educational mission
+2. A description of the learning environment, programs, and student experience
+3. A timely note on leadership, strategy, or facilities that makes this an exciting time to join
+
+Use subtle marketing language—polished but not overblown. Here are two sample overviews to guide your tone and structure:
+
+Example 1:
+Founded in 1982, Topeka Collegiate is a PreK–8 independent school that fosters confident, curious learners committed to community and global citizenship. For over 40 years, it has nurtured students through agile, student-centered learning grounded in equity and justice.  
+Graduates emerge as critical thinkers and compassionate leaders prepared for lifelong learning. A warm, familial culture supports character development and joyful exploration.  
+With the retirement of longtime Head Dr. Lyn Rantz, the school enters a pivotal moment to build on her legacy—including a new academic wing—and launch a strategic plan ahead of its 50th anniversary.
+
+Example 2:
+Gulliver Prep, one of the nation's largest independent schools, empowers 2,200 PreK–12 students to pursue excellence through curiosity, integrity, and innovation. Its vibrant Miami campuses blend academic rigor with joyful learning.  
+Signature programs in engineering, diplomacy, journalism, and the arts reflect Gulliver's commitment to personalized education. Diversity, global citizenship, and holistic wellness are central to its mission.  
+Amid new buildings and deepened partnerships with institutions like Harvard and Stanford, the school seeks a Head of School to help elevate its twin strategic pillars: Next Level Teaching & Learning and Thriving Students.
+"""},
+
+{"role": "user", "content": f"""Please create the 'Overview' section of a Position Description for the {position_name} position at {school_name} in {location}. Do not output your response with a '**Overview**' first. Base your writing on the following school notes, gathered from a phone call or visit:
+{notes_content}
+"""}
+
+            ],
+            max_tokens=5000
+)
+overview = response.choices[0].message.content
+
+# #responsibilities
+response = client.chat.completions.create(
+        model="gpt-4.1-nano",
+            messages=[
+                    {"role": "system", "content": f"""You are an experienced HR professional drafting the 'Opportunities and Challenges' section of a Position Description for a school leadership role. This section highlights the key strategic priorities, opportunities, and leadership challenges facing the school. It is meant to be clear, forward-looking, and grounded in the school's current context.
+
+Tone: professional, concise, and aspirational.  
+Length: About 300 words, ideally formatted as a short contextual paragraph followed by 5–10 bullet points. Make sure all bullet points are in this style: '•' not '-'. Do not output your response with a '**Opportunities and Challenges**' first. 
+
+Common themes to include (only where applicable based on school input):  
+• Academic program development  
+• Faculty hiring, retention, and growth  
+• Enrollment growth and community outreach  
+• Strategic planning and governance  
+• DEI and culture of belonging  
+• Campus improvements  
+• Stakeholder engagement and philanthropy
+
+Here are two brief examples for style and structure:
+
+Example 1:
+With a committed faculty and strong Board, Topeka Collegiate is well-positioned for its next stage of growth. A recently completed academic wing demonstrates the school's readiness to enhance its programs and deepen its community impact. The next Head will find strong support to take strategic, mission-aligned steps forward.  
+Key opportunities and challenges include:  
+• Enhancing enrollment through strategic outreach and storytelling  
+• Elevating the school's public profile in Topeka and beyond  
+• Continuing curricular innovation and experiential learning partnerships  
+• Developing a culture of philanthropy to sustain future growth  
+• Launching a new strategic planning process with community input
+
+Example 2:
+Gulliver Prep offers both scale and flexibility, providing the next Head of School with a robust platform to drive innovation and excellence. The school's diverse community and dynamic programs create space for visionary leadership grounded in collaboration and purpose.  
+Key opportunities and challenges include:  
+• Advancing a school-wide vision for academic innovation, including AI integration  
+• Strengthening professional development pipelines and evaluation systems  
+• Expanding off-campus learning: internships, travel, and service  
+• Deepening student wellness initiatives and defining what it means to "thrive"  
+• Bridging campuses with consistent culture, communication, and leadership
+"""},
+
+{"role": "user", "content": f"""Please write the 'Opportunities and Challenges' section for the {position_name} role at {school_name} in {location}, using the following school notes:
+
+{notes_content}
+"""}
+
+            ],
+            max_tokens=5000
+)
+oppChallenges = response.choices[0].message.content
+
+
+#qualifications
+response = client.chat.completions.create(
+        model="gpt-4.1-nano",
+            messages=[
+                    {"role": "system", "content": f"""You are an experienced HR professional writing the 'Qualifications' section of a Position Description for a leadership role at an independent or international school.
+
+This section highlights the qualifications, experience, and personal attributes that the school is seeking in its next leader. It should begin with a short paragraph (2–4 sentences) summarizing the leadership profile the school is looking for, followed by a clean, well-organized bullet-point list of specific qualifications.
+
+Tone: Warm, aspirational, and professional  
+Length: ~250–300 words  
+Structure: 
+1. Opening paragraph about the kind of leader sought  
+2. Bullet-point list of qualifications (you may group under subheadings if appropriate). Aim for 12hwh bullet points, and aim for 15 words per bullet point. Every bullet point should be in this style: '•' not '-'.
+
+Here are two brief examples for style and structure:
+
+Example 1:
+The next Head of School will be a collaborative, strategic, and inspiring leader who models authenticity, curiosity, and joy. They should be deeply committed to the mission of the school and eager to partner with a talented team to advance its next chapter.
+
+Successful candidates will ideally demonstrate:
+• Leadership experience in an independent or international school  
+• Deep understanding of curriculum development and faculty support  
+• Strong communication skills and cultural competency  
+• Strategic thinking paired with operational effectiveness  
+• Warmth, humility, humor, and a student-centered mindset  
+• A master's degree in education or related field
+
+Example 2:
+Gulliver seeks a visible, emotionally intelligent leader with a bold vision for teaching, learning, and community life. The ideal candidate will be energized by the school's diversity, scale, and ambition—and grounded in inclusive, servant-minded leadership.
+
+Ideal qualifications include:
+• Experience leading in large, complex K–12 environments  
+• Success recruiting and retaining diverse, mission-aligned teams  
+• A collaborative, transparent leadership style  
+• Strength in governance, strategy, and data-driven decision-making  
+• Courage to make difficult decisions with integrity  
+• Advanced degree and proven commitment to professional growth
+
+                     Do not output your response with a '**Qualifications**' first. Do not break your bullet points up into sections of bullet points. Output all bullet points in order. For example, do not break the bullet points up into sections like 'Educational and Leadership Experience.'
+                     """},
+
+{"role": "user", "content": f"""Please write the 'Qualifications' section of a Position Description for the {position_name} role at {school_name} in {location}, using the following school notes:
+
+{notes_content}
+"""}
+
+            ],
+            max_tokens=5000
+)
+qualifications = response.choices[0].message.content
+
+# --- Google Custom Search API for relevant websites ---
+import requests
+
+def google_search(query, api_key, cse_id):
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "q": query,
+        "key": api_key,
+        "cx": cse_id,
+        "num": 1
+    }
+    response = requests.get(url, params=params)
+    results = response.json()
+    if "items" in results and len(results["items"]) > 0:
+        return results["items"][0]["link"]
+    else:
+        return None
+
+# Set your Google API key and Custom Search Engine ID here
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GOOGLE_CSE_ID = os.environ.get("GOOGLE_SEARCH_ENGINE_ID")
+
+# Use Google Search to get the most relevant links
+websites_dict = {
+    "School Website": google_search(f"{school_name} official site", GOOGLE_API_KEY, GOOGLE_CSE_ID),
+    "Town Information": google_search(f"Town of {location} official site", GOOGLE_API_KEY, GOOGLE_CSE_ID),
+    "School History": google_search(f"{school_name} history", GOOGLE_API_KEY, GOOGLE_CSE_ID)
+}
+
+from docx import Document
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+
+# Path to logo image
+logo_path = 'Draft 5/logo.png'
+
+# Create a new Document
+doc = Document()
+
+# Add a table with 2 columns for layout (text left, logo right)
+header_table = doc.add_table(rows=1, cols=2)
+header_table.autofit = False
+header_table.columns[0].width = Inches(5.5)  # Left column for text
+header_table.columns[1].width = Inches(0.9)  # Right column for logo
+
+# LEFT COLUMN: All header text
+cell_left = header_table.cell(0, 0)
+
+# Position Title (fontSize=23, bold, all caps, left-aligned)
+title_para = cell_left.paragraphs[0]
+title_run = title_para.add_run(f"{position_name.upper()} SEARCH")
+title_run.bold = True
+title_run.font.size = Pt(23)
+title_run.font.name = "Helvetica"
+title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# School Name (fontSize=16, bold, all caps, left-aligned)
+school_para = cell_left.add_paragraph()
+school_run = school_para.add_run(school_name.upper())
+school_run.bold = True
+school_run.font.size = Pt(16)
+school_run.font.name = "Helvetica"
+school_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Location (fontSize=16, regular, left-aligned)
+loc_para = cell_left.add_paragraph(location)
+for run in loc_para.runs:
+    run.font.size = Pt(16)
+    run.font.name = "Helvetica"
+loc_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Website (fontSize=16, regular, left-aligned)
+web_para = cell_left.add_paragraph(website)
+for run in web_para.runs:
+    run.font.size = Pt(16)
+    run.font.name = "Helvetica"
+web_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Start Date (fontSize=16, regular, left-aligned)
+start_para = cell_left.add_paragraph(f"Start Date: {date}")
+for run in start_para.runs:
+    run.font.size = Pt(16)
+    run.font.name = "Helvetica"
+start_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+
+
+# RIGHT COLUMN: Logo, top-aligned
+cell_right = header_table.cell(0, 1)
+if os.path.exists(logo_path):
+    logo_para = cell_right.paragraphs[0]
+    logo_run = logo_para.add_run()
+    logo_run.add_picture(logo_path, width=Inches(2.0))
+    logo_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+else:
+    cell_right.text = "[Logo not found]"
+
+# Helper function to find and insert the first valid image for a given base path
+from glob import glob
+
+def insert_image_after(doc, base_path, width, after_para=None):
+    exts = ['.jpg', '.png']  # Only support .jpg and .png
+    for ext in exts:
+        image_path = f'{base_path}{ext}'
+        if os.path.exists(image_path):
+            try:
+                if after_para is not None:
+                    para = doc.insert_paragraph_after(after_para)
+                else:
+                    para = doc.add_paragraph()
+                run = para.add_run()
+                run.add_picture(image_path, width=width)
+                para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                return para
+            except Exception as e:
+                print(f"Could not add {image_path}: {e}")
+    print(f"No valid image found for {base_path}. Only .jpg and .png formats are supported.")
+    return None
+
+# Helper function to check if content will fit on current page
+def will_fit_on_current_page(doc, content_height):
+    section = doc.sections[0]
+    # Standard US Letter page height is 11 inches = 792 points
+    page_height = 792
+    current_height = 0
+    
+    # Calculate current content height including header table
+    for paragraph in doc.paragraphs:
+        if paragraph.runs:
+            # Add paragraph spacing
+            current_height += paragraph.paragraph_format.space_before
+            current_height += paragraph.paragraph_format.space_after
+            
+            # Add text height
+            for run in paragraph.runs:
+                if run.font.size:
+                    # Estimate text height based on font size and line spacing
+                    line_height = run.font.size.pt * 1.2  # Add 20% for line spacing
+                    current_height += line_height
+    
+    # Add margins (1 inch top and bottom = 72 points each)
+    current_height += 144  # 72 points * 2
+    
+    # Add some buffer space (20 points)
+    current_height += 20
+    
+    print(f"Current content height: {current_height/72:.2f} inches")
+    print(f"Page height: {page_height/72:.2f} inches")
+    print(f"Content height to add: {content_height/72:.2f} inches")
+    print(f"Total height if added: {(current_height + content_height)/72:.2f} inches")
+    print(f"Remaining space: {(page_height - current_height)/72:.2f} inches")
+    
+    return (current_height + content_height) < page_height
+
+# Helper function to calculate image height in points
+def get_image_height(image_path, width_inches):
+    try:
+        with PILImage.open(image_path) as img:
+            aspect_ratio = img.height / img.width
+            height_inches = width_inches * aspect_ratio
+            return height_inches * 72  # Convert inches to points
+    except Exception as e:
+        print(f"Error calculating image height: {e}")
+        return 0
+
+# Insert image1 after the header table with size adjustment if needed
+image1_path = 'Draft 5/image1.jpg'
+if os.path.exists(image1_path):
+    # Start with full width
+    image_width = Inches(6.5)
+    image_height = get_image_height(image1_path, 6.5)
+    
+    print("\nInitial image dimensions:")
+    print(f"Width: {image_width.inches:.2f} inches")
+    print(f"Height: {image_height/72:.2f} inches")
+    
+    # If image won't fit, gradually reduce size until it does
+    while not will_fit_on_current_page(doc, image_height) and image_width > Inches(2):
+        image_width = Inches(image_width.inches * 0.8)  # Reduce width by 20%
+        image_height = get_image_height(image1_path, image_width.inches)
+        print(f"\nResizing image:")
+        print(f"New width: {image_width.inches:.2f} inches")
+        print(f"New height: {image_height/72:.2f} inches")
+    
+    # Create a table to contain the image
+    image_table = doc.add_table(rows=1, cols=1)
+    image_table.autofit = False
+    image_table.columns[0].width = image_width
+    
+    # Get the cell and add the image
+    cell = image_table.cell(0, 0)
+    paragraph = cell.paragraphs[0]
+    run = paragraph.add_run()
+    run.add_picture(image1_path, width=image_width)
+    
+    # Set table properties to keep it on page 1
+    image_table.rows[0].cells[0].paragraphs[0].paragraph_format.keep_together = True
+    image_table.rows[0].cells[0].paragraphs[0].paragraph_format.keep_with_next = False
+    image_table.rows[0].cells[0].paragraphs[0].paragraph_format.page_break_before = False
+    
+    # Add a section break after the image
+    section = doc.add_section()
+    section.start_new_page = True
+else:
+    print("Warning: image1.jpg not found")
+
+# Add footer image to all pages
+footer_img_path = 'Draft 5/footer.png'
+if os.path.exists(footer_img_path):
+    # Set footer image width to 85% of page width
+    footer_width = Inches(8.5 * 0.85)  # 8.5 inches is standard page width
+    
+    # Add to all sections
+    for section in doc.sections:
+        footer = section.footer
+        # Clear any existing content
+        for paragraph in footer.paragraphs:
+            p = paragraph._element
+            p.getparent().remove(p)
+        
+        # Add the image
+        footer_para = footer.add_paragraph()
+        footer_run = footer_para.add_run()
+        footer_run.add_picture(footer_img_path, width=footer_width)
+        footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+# Set document margins: keep left at 0.75 inch, right at 0.75 inch
+for section in doc.sections:
+    section.left_margin = Inches(0.75)
+    section.right_margin = Inches(0.75)
+
+# Extract dominant color from logo for use in mission statement title
+logo_img_path = logo_path
+mission_title_color = (0, 0, 0)  # Default to black
+try:
+    with PILImage.open(logo_img_path) as img:
+        img = img.convert('RGB')
+        img = img.resize((50, 50))
+        pixels = list(img.getdata())
+        from collections import Counter
+        most_common_colors = Counter(pixels).most_common(5)
+        # Helper to check if a color is white, grey, or black
+        def is_white_grey_black(rgb):
+            r, g, b = rgb
+            # White
+            if r > 240 and g > 240 and b > 240:
+                return True
+            # Black
+            if r < 20 and g < 20 and b < 20:
+                return True
+            # Grey (all channels close together and not too saturated)
+            if abs(r-g) < 10 and abs(r-b) < 10 and abs(g-b) < 10 and 60 < r < 220:
+                return True
+            return False
+        # Find the first non-white/grey/black color
+        for color, _ in most_common_colors:
+            if not is_white_grey_black(color):
+                mission_title_color = color
+                break
+        else:
+            # If all are white/grey/black, use the most common anyway
+            mission_title_color = most_common_colors[0][0]
+except Exception as e:
+    pass
+
+from docx.shared import RGBColor
+
+# Add mission statement title (now guaranteed to be on page 2)
+mission_title_para = doc.add_paragraph()
+mission_title_run = mission_title_para.add_run('Mission Statement')
+mission_title_run.bold = True
+mission_title_run.font.size = Pt(24)
+mission_title_run.font.name = 'Helvetica'
+mission_title_run.font.color.rgb = RGBColor(*mission_title_color)
+mission_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+mission_title_para.paragraph_format.space_before = Pt(0)  # Remove any space before
+mission_title_para.paragraph_format.space_after = Pt(12)  # Add some space after
+mission_title_para.paragraph_format.page_break_before = True  # Force page break before
+
+# Add the mission statement text below the title
+mission_text_para = doc.add_paragraph()
+mission_text_run = mission_text_para.add_run(mission_statement)
+mission_text_run.font.size = Pt(13)
+mission_text_run.font.name = 'Helvetica'
+mission_text_run.font.color.rgb = RGBColor(0, 0, 0)
+mission_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+mission_text_para.paragraph_format.line_spacing = 0.99
+
+# Insert image2 after the mission statement
+insert_image_after(doc, 'Draft 5/image2', Inches(7))
+
+# Add 'Overview' title below image2, same format as 'MISSION STATEMENT'
+overview_title_para = doc.add_paragraph()
+overview_title_run = overview_title_para.add_run('Overview')
+overview_title_run.bold = True
+overview_title_run.font.size = Pt(24)
+overview_title_run.font.name = 'Helvetica'
+overview_title_run.font.color.rgb = RGBColor(*mission_title_color)
+overview_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add the overview paragraph below the 'OVERVIEW' title, formatted like the mission statement
+overview_text_para = doc.add_paragraph()
+overview_text_run = overview_text_para.add_run(overview)
+overview_text_run.font.size = Pt(13)
+overview_text_run.font.name = 'Helvetica'
+overview_text_run.font.color.rgb = RGBColor(0, 0, 0)
+overview_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+overview_text_para.paragraph_format.line_spacing = 0.99
+
+# Insert image3 after the overview
+insert_image_after(doc, 'Draft 5/image3', Inches(7))
+
+# Add a larger vertical space before 'Opportunities and Challenges' title
+opps_spacer_para = doc.add_paragraph()
+opps_spacer_run = opps_spacer_para.add_run("\n")
+opps_spacer_run.font.size = Pt(8)
+
+# Add 'Opportunities and Challenges' title below image3, same format as other titles
+opps_title_para = doc.add_paragraph()
+opps_title_run = opps_title_para.add_run('Opportunities and Challenges')
+opps_title_run.bold = True
+opps_title_run.font.size = Pt(24)
+opps_title_run.font.name = 'Helvetica'
+opps_title_run.font.color.rgb = RGBColor(*mission_title_color)
+opps_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add the oppChallenges paragraph below the title, formatted like other body paragraphs
+phrase = "Key opportunities and challenges include:"
+if phrase in oppChallenges:
+    before, after = oppChallenges.split(phrase, 1)
+    # Add the text before the phrase
+    opps_text_para = doc.add_paragraph()
+    if before.strip():
+        run_before = opps_text_para.add_run(before)
+        run_before.font.size = Pt(13)
+        run_before.font.name = 'Helvetica'
+        run_before.font.color.rgb = RGBColor(0, 0, 0)
+    # Add the bold phrase
+    run_bold = opps_text_para.add_run(phrase)
+    run_bold.bold = True
+    run_bold.font.size = Pt(13)
+    run_bold.font.name = 'Helvetica'
+    run_bold.font.color.rgb = RGBColor(0, 0, 0)
+    opps_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    opps_text_para.paragraph_format.line_spacing = 0.99
+    # Now process the bullet points after the phrase
+    for line in after.split('\n'):
+        line = line.strip()
+        if line.startswith('•'):
+            bullet_para = doc.add_paragraph()
+            bullet_run = bullet_para.add_run(line)
+            bullet_run.font.size = Pt(13)
+            bullet_run.font.name = 'Helvetica'
+            bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+            bullet_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            bullet_para.paragraph_format.left_indent = Pt(9)
+            bullet_para.paragraph_format.first_line_indent = Pt(-9)
+            bullet_para.paragraph_format.space_after = Pt(1)
+            bullet_para.paragraph_format.line_spacing = 0.99
+        elif line:
+            # If not a bullet, add as normal paragraph
+            para = doc.add_paragraph()
+            run = para.add_run(line)
+            run.font.size = Pt(13)
+            run.font.name = 'Helvetica'
+            run.font.color.rgb = RGBColor(0, 0, 0)
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            para.paragraph_format.line_spacing = 0.99
+else:
+    # Fallback: just add the whole text
+    opps_text_para = doc.add_paragraph()
+    opps_text_run = opps_text_para.add_run(oppChallenges)
+    opps_text_run.font.size = Pt(13)
+    opps_text_run.font.name = 'Helvetica'
+    opps_text_run.font.color.rgb = RGBColor(0, 0, 0)
+    opps_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    opps_text_para.paragraph_format.line_spacing = 0.99
+
+# Insert image4 before Qualifications section
+insert_image_after(doc, 'Draft 5/image4', Inches(7))
+
+# Add a larger vertical space before 'Qualifications and Personal Attributes' title
+quals_spacer_para = doc.add_paragraph()
+quals_spacer_run = quals_spacer_para.add_run("\n")
+quals_spacer_run.font.size = Pt(8)
+
+# Add 'Qualifications and Personal Attributes' title, same format as other titles
+quals_title_para = doc.add_paragraph()
+quals_title_run = quals_title_para.add_run('Qualifications and Personal Attributes')
+quals_title_run.bold = True
+quals_title_run.font.size = Pt(24)
+quals_title_run.font.name = 'Helvetica'
+quals_title_run.font.color.rgb = RGBColor(*mission_title_color)
+quals_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add the qualifications paragraph below the title, formatted like other body paragraphs
+# Instead of a single paragraph, split into bullet points with hanging indent
+if '•' in qualifications:
+    for line in qualifications.split('\n'):
+        line = line.strip()
+        if line.startswith('•'):
+            bullet_para = doc.add_paragraph()
+            bullet_run = bullet_para.add_run(line)
+            bullet_run.font.size = Pt(13)
+            bullet_run.font.name = 'Helvetica'
+            bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+            bullet_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            bullet_para.paragraph_format.left_indent = Pt(9)
+            bullet_para.paragraph_format.first_line_indent = Pt(-9)
+            bullet_para.paragraph_format.space_after = Pt(1)
+            bullet_para.paragraph_format.line_spacing = 0.99
+        elif line:
+            para = doc.add_paragraph()
+            run = para.add_run(line)
+            run.font.size = Pt(13)
+            run.font.name = 'Helvetica'
+            run.font.color.rgb = RGBColor(0, 0, 0)
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            para.paragraph_format.line_spacing = 0.99
+else:
+    quals_text_para = doc.add_paragraph()
+    quals_text_run = quals_text_para.add_run(qualifications)
+    quals_text_run.font.size = Pt(13)
+    quals_text_run.font.name = 'Helvetica'
+    quals_text_run.font.color.rgb = RGBColor(0, 0, 0)
+    quals_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    quals_text_para.paragraph_format.line_spacing = 0.99
+
+# Add a larger vertical space before 'Learn More' title
+learn_spacer_para = doc.add_paragraph()
+learn_spacer_run = learn_spacer_para.add_run("\n")
+learn_spacer_run.font.size = Pt(8)
+
+# Add 'Learn More' title, same format as other titles
+learn_title_para = doc.add_paragraph()
+learn_title_run = learn_title_para.add_run('Learn More')
+learn_title_run.bold = True
+learn_title_run.font.size = Pt(24)
+learn_title_run.font.name = 'Helvetica'
+learn_title_run.font.color.rgb = RGBColor(*mission_title_color)
+learn_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add subtitle under 'Learn More'
+learn_subtitle_para = doc.add_paragraph()
+learn_subtitle_run = learn_subtitle_para.add_run(f'Click on the links below to learn more about {school_name}.')
+learn_subtitle_run.font.size = Pt(13)
+learn_subtitle_run.font.name = 'Helvetica'
+learn_subtitle_run.font.color.rgb = RGBColor(0, 0, 0)
+learn_subtitle_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add the useful websites as clickable hyperlinks in a two-column table
+def add_hyperlink(paragraph, url, text, color="0000FF", underline=True):
+    # This gets access to the document.xml.rels file and gets a new relation id value
+    part = paragraph.part
+    r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True)
+
+    # Create the w:hyperlink tag and add needed values
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    # Create a w:r element
+    new_run = OxmlElement("w:r")
+
+    # Create a w:rPr element
+    rPr = OxmlElement("w:rPr")
+
+    # Add color if it is given
+    if color is not None:
+        c = OxmlElement("w:color")
+        c.set(qn("w:val"), color)
+        rPr.append(c)
+
+    # Underline
+    if underline:
+        u = OxmlElement("w:u")
+        u.set(qn("w:val"), "single")
+        rPr.append(u)
+
+    # Font
+    rFonts = OxmlElement("w:rFonts")
+    rFonts.set(qn("w:ascii"), "Helvetica")
+    rFonts.set(qn("w:hAnsi"), "Helvetica")
+    rPr.append(rFonts)
+
+    # Font size (18pt = 36 half-points)
+    sz = OxmlElement("w:sz")
+    sz.set(qn("w:val"), "36")
+    rPr.append(sz)
+
+    # Add the w:rPr to the w:r
+    new_run.append(rPr)
+
+    # Create a w:t element and set the text
+    text_elem = OxmlElement("w:t")
+    text_elem.text = text
+    new_run.append(text_elem)
+
+    # Add the w:r to the hyperlink
+    hyperlink.append(new_run)
+
+    # Add the hyperlink to the paragraph
+    paragraph._p.append(hyperlink)
+
+    return paragraph
+
+# Calculate number of rows needed (2 links per row)
+num_links = len(websites_dict)
+num_rows = (num_links + 1) // 2  # Round up division
+
+# Create table with correct number of rows
+links_table = doc.add_table(rows=num_rows, cols=2)
+links_table.autofit = False
+links_table.columns[0].width = Inches(3.25)  # Left column
+links_table.columns[1].width = Inches(3.25)  # Right column
+
+# Convert dictionary items to list for easier indexing
+websites_list = list(websites_dict.items())
+
+# Add links to table cells
+for i, (website_name, url) in enumerate(websites_list):
+    row = i // 2  # Integer division to determine row
+    col = i % 2   # Modulo to determine column (0 or 1)
+    cell = links_table.cell(row, col)
+    para = cell.paragraphs[0]
+    add_hyperlink(para, url, website_name)
+    para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add a larger vertical space before 'To Apply' title
+apply_spacer_para = doc.add_paragraph()
+apply_spacer_run = apply_spacer_para.add_run("\n")
+apply_spacer_run.font.size = Pt(8)
+
+# Add 'To Apply' title, same format as other titles
+apply_title_para = doc.add_paragraph()
+apply_title_run = apply_title_para.add_run('To Apply')
+apply_title_run.bold = True
+apply_title_run.font.size = Pt(24)
+apply_title_run.font.name = 'Helvetica'
+apply_title_run.font.color.rgb = RGBColor(*mission_title_color)
+apply_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Add the application instructions below the title
+apply_text_para = doc.add_paragraph()
+apply_text_run = apply_text_para.add_run("Interested and qualified candidates are invited to contact the consultants in confidence. Candidates will ultimately need to submit the following materials as separate PDF documents:")
+apply_text_run.font.size = Pt(13)
+apply_text_run.font.name = 'Helvetica'
+apply_text_run.font.color.rgb = RGBColor(0, 0, 0)
+apply_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+apply_text_para.paragraph_format.line_spacing = 0.99
+
+# Add bullet points for required materials
+apply_bullets = [
+    "A cover letter expressing their interest in this particular position;",
+    "A current résumé;",
+    "A statement of educational and leadership philosophy;",
+    "A list of five professional references with name, relationship, phone number, and email address of each (references will not be contacted without the candidate's permission) to:"
+]
+for i, bullet in enumerate(apply_bullets):
+    bullet_para = doc.add_paragraph()
+    bullet_run = bullet_para.add_run(f"• {bullet}")
+    bullet_run.font.size = Pt(13)
+    bullet_run.font.name = 'Helvetica'
+    bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+    bullet_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    bullet_para.paragraph_format.left_indent = Pt(18)
+    bullet_para.paragraph_format.space_after = Pt(1)
+    bullet_para.paragraph_format.line_spacing = 0.99
+    if i == len(apply_bullets) - 1:
+        # Add a small vertical space after the last bullet
+        spacer_para = doc.add_paragraph()
+        spacer_run = spacer_para.add_run("\n")
+        spacer_run.font.size = Pt(6)
+
+# Consultant Name (bold)
+consultant_name_para = doc.add_paragraph()
+consultant_name_run = consultant_name_para.add_run(consultant_name)
+consultant_name_run.bold = True
+consultant_name_run.font.size = Pt(13)
+consultant_name_run.font.name = 'Helvetica'
+consultant_name_run.font.color.rgb = RGBColor(0, 0, 0)
+consultant_name_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+consultant_name_para.paragraph_format.space_after = Pt(1)
+
+# 'Consultant' title
+consultant_title_para = doc.add_paragraph()
+consultant_title_run = consultant_title_para.add_run("Consultant")
+consultant_title_run.font.size = Pt(13)
+consultant_title_run.font.name = 'Helvetica'
+consultant_title_run.font.color.rgb = RGBColor(0, 0, 0)
+consultant_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+consultant_title_para.paragraph_format.space_after = Pt(1)
+
+# Consultant email
+consultant_email_para = doc.add_paragraph()
+consultant_email_run = consultant_email_para.add_run(consultant_email)
+consultant_email_run.font.size = Pt(13)
+consultant_email_run.font.name = 'Helvetica'
+consultant_email_run.font.color.rgb = RGBColor(0, 0, 0)
+consultant_email_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+consultant_email_para.paragraph_format.space_after = Pt(1)
+
+# Save the document
+doc.save('Draft 5/output.docx')
+
+# Convert to PDF
+from docx2pdf import convert
+convert('Draft 5/output.docx', 'Draft 5/output.pdf')
+
+# Scrape the website for text
+def scrape_website_for_text(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Get all visible text
+        texts = soup.stripped_strings
+        full_text = ' '.join(texts)
+        return full_text
+    except Exception as e:
+        print(f"Error scraping website: {e}")
+        return ""
+
+scraped_text = scrape_website_for_text(website)

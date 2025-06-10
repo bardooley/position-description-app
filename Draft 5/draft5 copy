@@ -1,0 +1,298 @@
+import PyPDF2
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.units import inch
+import requests
+import os
+from PIL import Image as PILImage
+from io import BytesIO
+import json
+from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from PIL import Image as PILImage
+from io import BytesIO
+import os
+# import openai
+# api_key = os.environ.get("OPENAI_API_KEY")
+# client = openai.OpenAI(api_key=api_key)
+
+
+# Prompt the user for school information
+#school_name = input("Enter the school name: ")
+#position_name = input("Enter the position name: ")
+#notes_file = input("Enter the name of the file containing your notes on the school: ")
+#location = input("Enter the location of the school: ")
+#website = input("Enter the website of the school: ")
+#date = input("Enter the start date of this position (Example: June 2026. May 2027.):  ")
+#consultant_name = input("Enter the name of the consultant in charge of this search: ")
+#consultant_email = input("Enter the email of the consultant in charge of this search: ")
+
+school_name = "Catholic Memorial High School"
+position_name = "Athletic Director"
+notes_file = "CM_notes.pdf"
+location = "West Roxbury, MA"
+website = "https://www.catholicmemorial.org/"
+date = "July 2026"
+consultant_name = "Jim Shwartz"
+consultant_email = "jim.shwartz@carneysandoe.com"
+
+# Read the contents of the notes file
+try:
+    with open(f'Draft 5/{notes_file}', 'r') as file:
+        notes_content = file.read()
+    print(f"\nSuccessfully read notes from {notes_file}")
+    print(f"Notes preview: {notes_content[:100]}..." if len(notes_content) > 100 else f"Notes: {notes_content}")
+except FileNotFoundError:
+    print(f"\nError: The file '{notes_file}' was not found in the Draft 5 folder.")
+    notes_content = ""
+except Exception as e:
+    #print(f"\nError reading the file: {str(e)}")
+    notes_content = ""
+
+
+    # Check if the file is a PDF
+if notes_file.lower().endswith('.pdf'):
+    # Open the PDF file
+    with open(f'Draft 5/{notes_file}', 'rb') as file:
+        # Create a PDF reader object
+        pdf_reader = PyPDF2.PdfReader(file)
+                
+        # Extract text from all pages
+        notes_content = ""
+        for page in pdf_reader.pages:
+                notes_content += page.extract_text()
+                    
+    print(f"\nSuccessfully read PDF notes from {notes_file}")
+    #print(f"Notes preview: {notes_content[:100]}..." if len(notes_content) > 100 else f"Notes: {notes_content}")
+    
+# import openai
+# api_key = os.environ.get("OPENAI_API_KEY")
+# client = openai.OpenAI(api_key=api_key)
+
+
+# response = client.chat.completions.create(
+#         model="gpt-4.1-nano",
+#             messages=[
+#                     {"role": "system", "content": f"You are an experienced HR professional. You are creating a 'Position Description.' This document will be displayed to people that apply for the position '{position_name}' at '{school_name}'. Please pull from the internet to create this overview. Additionally, here are some notes on the school, taken directly from a phone call or personal visit with school administrators: {notes_content} "},
+#                     {"role": "user", "content": f"Please create the 'overview' section of a Position Description for the {position_name} position at {school_name} in {location}. This overview section should be about 100 words in length. It is the first section of the longer 'Position Description' document, which will be displayed to all future applicants to this job. \
+#                     Here is an example of what the overview section of a Position Description looked like for 'The Thacher School': 'Founded in 1889 by Sherman Day Thacher, \
+#                     The Thacher School serves academically talented students from 24 states and nine countries in a rigorous college preparatory experience. Fifty-five percent of students identify as people of color. The faculty and students live and work closely together on a \
+#                     427-acre campus nestled in the foothills of the Los Padres National Forest in Ojai, California (85-miles north of Los Angeles). Honor, fairness, kindness, and truth are the cornerstones of school life. Together, school community commits to the belief that demands in the academic classroom, when combined with those of mountains and horses, of sports and the arts, produce independent minds, strong bodies, and powerful character. The School \
+#                     enrolls 260 students, has an operating budget of $29 million, and an endowment of $180 million.'"}
+#             ],
+#             max_tokens=1500
+# )
+# print(f"Total tokens: {response.usage.total_tokens}")
+# overview = response.choices[0].message.content
+
+# #responsibilities
+# response = client.chat.completions.create(
+#         model="gpt-4.1-nano",
+#             messages=[
+#                     {"role": "system", "content": f"You are an experienced HR professional. You are creating a 'Position Description.' This document will be displayed to people that apply for the position '{position_name}' at '{school_name}'. Please pull from the internet to create this overview. Additionally, here are some notes on the school, taken directly from a phone call or personal visit with school administrators: {notes_content} "},
+#                     {"role": "user", "content": f"Please create the 'responsibilities' section of a Position Description for the {position_name} position at {school_name}. This responsibilities section should be about 200 words in length. It is the second section of the longer 'Position Description' document, which will be displayed to all future applicants to this job. Do not say 'Responsibilities:' at the start. Simply output the text. Make sure to break your response up into bullet points. Each bullet point should be about 50 words. 55 maximum. Absolutely no longer than 55 words. Do not output your response with a '-' first. no hyphen. just state the content of the bullet point. \
+#                     Here is an example of what the overview section of a Position Description looked like for 'The Thacher School': 'Key Responsibilities: \
+# Reunion Giving Leadership \
+# ● Lead the Reunion Giving program, including campaign strategy, goal setting, timelines, and \
+# reporting. \
+# ● Identify, cultivate, and solicit lead donors from each reunion class. \
+# ● Recruit and support volunteer class agents to drive participation and enthusiasm. \
+# ● Collaborate with the Alumni Relations team on comprehensive reunion strategy and \
+# programming. \
+# Team Collaboration \
+# ● Serve as mentor and thought partner to the Associate Director of Alumni Giving. \
+# ● Work closely with the Annual Giving team to align on participation campaigns and overall \
+# fundraising goals. \
+# ● Partner with Alumni Relations on class rep engagement and 50th reunion planning. \
+# ● Coordinate with major gifts officers on shared donor strategy and stewardship. \
+# Portfolio Fundraising \
+# ● Manage a personal portfolio of 100–125 alumni and reunion prospects. \
+# ● Conduct 120+ donor meetings annually with an emphasis on cultivation, solicitation, and \
+# stewardship. \
+# ● Draft proposals, contact reports, and personalized donor communications in partnership with \
+# the Director of Institutional Advancement. \
+# ● Set and track clear goals with defined timelines and measurable outcomes.'"}
+#             ],
+#             max_tokens=1500
+# )
+# responsibilities = response.choices[0].message.content
+# print(responsibilities)
+
+# #qualifications
+# response = client.chat.completions.create(
+#         model="gpt-4.1-nano",
+#             messages=[
+#                     {"role": "system", "content": f"You are an experienced HR professional. You are creating a 'Position Description.' This document will be displayed to people that apply for the position '{position_name}' at '{school_name}'. Please pull from the internet to create this. Additionally, here are some notes on the school, taken directly from a phone call or personal visit with school administrators: {notes_content} "},
+#                     {"role": "user", "content": f"Please create the 'qualifications' section of a Position Description for the {position_name} position at {school_name}. This qualifications section should be between 75-110 words in length. It is the third section of the longer 'Position Description' document, which will be displayed to all future applicants to this job. Make sure to break your response up into bullet points. Use the '-' symbol to create bullet points. Each bullet point should be about 30 words long. No longer than 40 maximum. Do not say 'Qualifications:' at the start. \
+#                     Here is an example of what the qualifications section of a Position Description looked like for 'The Thacher School': ● A deep belief in—and ability to articulate—the mission and values of The Thacher School,including a demonstrated commitment to equity, inclusion, and belonging.● Proven track record of cultivating relationships and securing philanthropic support.● Outstanding communication skills—oral, written, and interpersonal.\
+# ● Bachelor's degree preferred. \
+# ● Experience managing projects and priorities in a fast-paced, collaborative environment.\
+# ● Cultural fluency and a respectful, inclusive approach to engaging a wide range of constituents.\
+# ● Comfort and skill in holding space for complex and nuanced conversations.\
+# ● Familiarity with Raisers Edge or a comparable CRM system.\
+# ● High standards of discretion, accountability, and integrity.\
+# ● Availability and enthusiasm for travel.'"}
+#             ],
+#             max_tokens=1500
+# )
+# print(f"Total tokens: {response.usage.total_tokens}")
+# qualifications = response.choices[0].message.content
+
+# #salary 
+# response = client.chat.completions.create(
+#         model="gpt-4.1-nano",
+#             messages=[
+#                     {"role": "system", "content": f"You are an experienced HR professional. You are creating a 'Position Description.' This document will be displayed to people that apply for the position '{position_name}' at '{school_name}'. Here are some notes on the school, taken directly from a phone call or personal visit with school administrators. If there is an exact salary specified, that's most important. If there is conflicting salary expectations online, ignore that information and use the salary specified in the notes. Here are the notes: {notes_content} "},
+#                     {"role": "user", "content": f"Please create the 'salary' section of a Position Description for the {position_name} position at {school_name}. This salary section should be about 50 words in length. It is the fourth section of the longer 'Position Description' document, which will be displayed to all future applicants to this job. \
+#                     Here is an example of what the salary section of a Position Description looked like for 'The Thacher School': 'Salary Range is $105,000-$125,000. Final salary \
+# is based on experience relevant to the role and \
+# internal equity. The Alumni and Development \
+# Offices offers a hybrid, flexible work \
+# environment. Thacher offers a competitive total \
+# rewards package, which includes a 403(b) match, \
+# healthcare coverage, and a broad range of other \
+# benefits including full tuition remission for \
+# eligible dependents, use of campus facilities and \
+# generous professional development support. \
+# Housing is not included in this role'"}
+#                     ],
+#             max_tokens=1500
+# )
+# print(f"Total tokens: {response.usage.total_tokens}")
+# salary = response.choices[0].message.content
+# print(salary)
+
+from docx import Document
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+
+# Path to logo image
+logo_path = 'Draft 5/logo.png'
+
+# Create a new Document
+doc = Document()
+
+# Add a table with 2 columns for layout (text left, logo right)
+header_table = doc.add_table(rows=1, cols=2)
+header_table.autofit = False
+header_table.columns[0].width = Inches(4.5)  # Left column for text
+header_table.columns[1].width = Inches(2.5)  # Right column for logo
+
+# LEFT COLUMN: All header text
+cell_left = header_table.cell(0, 0)
+
+# Position Title (fontSize=23, bold, all caps, left-aligned)
+title_para = cell_left.paragraphs[0]
+title_run = title_para.add_run(position_name.upper())
+title_run.bold = True
+title_run.font.size = Pt(23)
+title_run.font.name = "Helvetica"
+title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# School Name (fontSize=16, bold, all caps, left-aligned)
+school_para = cell_left.add_paragraph()
+school_run = school_para.add_run(school_name.upper())
+school_run.bold = True
+school_run.font.size = Pt(16)
+school_run.font.name = "Helvetica"
+school_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Location (fontSize=16, regular, left-aligned)
+loc_para = cell_left.add_paragraph(location)
+for run in loc_para.runs:
+    run.font.size = Pt(16)
+    run.font.name = "Helvetica"
+loc_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Website (fontSize=16, regular, left-aligned)
+web_para = cell_left.add_paragraph(website)
+for run in web_para.runs:
+    run.font.size = Pt(16)
+    run.font.name = "Helvetica"
+web_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Start Date (fontSize=16, regular, left-aligned)
+start_para = cell_left.add_paragraph(f"Start Date: {date}")
+for run in start_para.runs:
+    run.font.size = Pt(16)
+    run.font.name = "Helvetica"
+start_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+
+
+# RIGHT COLUMN: Logo, top-aligned
+cell_right = header_table.cell(0, 1)
+if os.path.exists(logo_path):
+    logo_para = cell_right.paragraphs[0]
+    logo_run = logo_para.add_run()
+    logo_run.add_picture(logo_path, width=Inches(2.2))
+    logo_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+else:
+    cell_right.text = "[Logo not found]"
+
+# Insert 'image1.jpg' after the header table, full page width (7.0 inches), centered
+image1_path = 'Draft 5/image1.jpg'
+if os.path.exists(image1_path):
+    # Add vertical space before the image (about 1/3 inch)
+    spacer_para = doc.add_paragraph()
+    spacer_run = spacer_para.add_run("\n")
+    spacer_run.font.size = Pt(24)  # Approximate 1/3 inch
+    image1_para = doc.add_paragraph()
+    image1_run = image1_para.add_run()
+    image1_run.add_picture(image1_path, width=Inches(6.25))
+    image1_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+# After all other content, add a colored rectangle at the bottom of the first page as a full-width image in the footer
+from PIL import Image as PILImage, ImageDraw
+footer_img_path = 'Draft 5/footer_bar.png'
+page_width_in = 8.5
+bar_height_in = 0.5
+DPI = 300
+img_width_px = int(page_width_in * DPI)
+img_height_px = int(bar_height_in * DPI)
+
+# Get dominant color from logo.png
+logo_img_path = logo_path
+rectangle_color = (0, 0, 0)  # Default to black if extraction fails
+try:
+    with PILImage.open(logo_img_path) as img:
+        img = img.convert('RGB')
+        img = img.resize((50, 50))  # Speed up
+        pixels = list(img.getdata())
+        # Find the most common color
+        from collections import Counter
+        most_common = Counter(pixels).most_common(1)[0][0]
+        print(most_common)
+        rectangle_color = most_common
+except Exception as e:
+    pass
+
+# Create the image
+footer_img = PILImage.new('RGB', (img_width_px, img_height_px), rectangle_color)
+footer_img.save(footer_img_path)
+
+# Insert the image into the footer
+section = doc.sections[0]
+# Set margins to 0 for full-bleed footer
+original_left_margin = section.left_margin
+original_right_margin = section.right_margin
+section.left_margin = Inches(0)
+section.right_margin = Inches(0)
+footer = section.footer
+footer_para = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+footer_run = footer_para.add_run()
+footer_run.add_picture(footer_img_path, width=Inches(page_width_in), height=Inches(bar_height_in))
+footer_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+# Reset margins for main content
+section.left_margin = Inches(0.5)
+section.right_margin = Inches(0.5)
+
+# Save the document
+doc.save('Draft 5/output.docx')

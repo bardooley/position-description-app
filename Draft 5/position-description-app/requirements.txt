@@ -1,0 +1,8 @@
+streamlit
+python-docx
+docx2pdf
+openai
+pillow
+beautifulsoup4
+requests
+PyPDF2
