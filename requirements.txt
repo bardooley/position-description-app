@@ -2,7 +2,7 @@ streamlit
 python-docx
 docx2pdf
 openai
-Pillow==10.2.0 --only-binary :all:
+Pillow==11.2.1
 beautifulsoup4
 requests
 PyPDF2
