@@ -65,9 +65,9 @@ google_api_key = os.environ.get("GOOGLE_API_KEY")
 google_cse_id = os.environ.get("GOOGLE_SEARCH_ENGINE_ID")
 
 def save_uploaded_file(uploaded_file, filename):
-    """Save an uploaded file to the Draft 5 directory"""
+    """Save an uploaded file to the CS&A directory"""
     if uploaded_file is not None:
-        with open(f"Draft 5/{filename}", "wb") as f:
+        with open(f"CS&A/{filename}", "wb") as f:
             f.write(uploaded_file.getbuffer())
         return True
     return False
@@ -108,60 +108,31 @@ def add_hyperlink(paragraph, url, text, color="0000FF", underline=True):
     paragraph._p.append(hyperlink)
     return paragraph
 
-def insert_image_after(doc, base_path, width, after_para=None):
-    """Insert an image after a paragraph"""
-    exts = ['.jpg', '.png']
-    for ext in exts:
-        image_path = f'{base_path}{ext}'
-        if os.path.exists(image_path):
-            try:
-                if after_para is not None:
-                    para = doc.insert_paragraph_after(after_para)
-                else:
-                    para = doc.add_paragraph()
-                run = para.add_run()
-                run.add_picture(image_path, width=width)
-                para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                return para
-            except Exception as e:
-                st.error(f"Could not add {image_path}: {e}")
-    st.warning(f"No valid image found for {base_path}. Only .jpg and .png formats are supported.")
+def insert_image_from_memory(doc, image_data, width, after_para=None):
+    """Insert an image from memory data after a paragraph"""
+    if image_data is not None:
+        try:
+            if after_para is not None:
+                para = doc.insert_paragraph_after(after_para)
+            else:
+                para = doc.add_paragraph()
+            run = para.add_run()
+            run.add_picture(BytesIO(image_data.getvalue()), width=width)
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            return para
+        except Exception as e:
+            st.error(f"Could not add image: {e}")
     return None
 
 def generate_document():
     """Generate the position description document"""
     try:
-        # Save uploaded files
-        if notes_file:
-            save_uploaded_file(notes_file, "GS_notes.pdf")
-        if logo:
-            save_uploaded_file(logo, "logo.png")
-        if image1:
-            save_uploaded_file(image1, "image1.jpg")
-        if image2:
-            save_uploaded_file(image2, "image2.jpg")
-        if image3:
-            save_uploaded_file(image3, "image3.jpg")
-        if image4:
-            save_uploaded_file(image4, "image4.jpg")
-        if image5:
-            save_uploaded_file(image5, "image5.jpg")
-
-        # Copy the preset footer image
-        if os.path.exists("Draft 5/footer.png"):
-            # Footer image is already in place
-            pass
-        else:
-            st.error("Footer image not found. Please ensure footer.png exists in the Draft 5 directory.")
-            return False, "Footer image missing"
-
-        # Read notes content
+        # Read notes content from memory
         notes_content = ""
-        if os.path.exists("Draft 5/GS_notes.pdf"):
-            with open("Draft 5/GS_notes.pdf", 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                for page in pdf_reader.pages:
-                    notes_content += page.extract_text()
+        if notes_file is not None:
+            pdf_reader = PyPDF2.PdfReader(BytesIO(notes_file.getvalue()))
+            for page in pdf_reader.pages:
+                notes_content += page.extract_text()
 
         # Set OpenAI API key
         client = openai.OpenAI(api_key=openai_api_key)
@@ -344,16 +315,46 @@ Do not output your response with a '**Qualifications**' first. Do not break your
                 run.font.name = "Helvetica"
             para.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-        # Add logo
-        if os.path.exists("Draft 5/logo.png"):
+        # Add logo from memory
+        if logo is not None:
             cell_right = header_table.cell(0, 1)
             logo_para = cell_right.paragraphs[0]
             logo_run = logo_para.add_run()
-            logo_run.add_picture("Draft 5/logo.png", width=Inches(2.0))
+            logo_run.add_picture(BytesIO(logo.getvalue()), width=Inches(2.0))
             logo_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-        # Add image1
-        if os.path.exists("Draft 5/image1.jpg"):
+            # Extract dominant color from logo
+            try:
+                with PILImage.open(BytesIO(logo.getvalue())) as img:
+                    img = img.convert('RGB')
+                    img = img.resize((50, 50))
+                    pixels = list(img.getdata())
+                    most_common_colors = Counter(pixels).most_common(5)
+                    
+                    def is_white_grey_black(rgb):
+                        r, g, b = rgb
+                        if r > 240 and g > 240 and b > 240:  # White
+                            return True
+                        if r < 20 and g < 20 and b < 20:  # Black
+                            return True
+                        if abs(r-g) < 10 and abs(r-b) < 10 and abs(g-b) < 10 and 60 < r < 220:  # Grey
+                            return True
+                        return False
+                    
+                    for color, _ in most_common_colors:
+                        if not is_white_grey_black(color):
+                            mission_title_color = color
+                            break
+                    else:
+                        mission_title_color = most_common_colors[0][0]
+            except Exception as e:
+                st.warning(f"Could not extract color from logo: {e}")
+                mission_title_color = (0, 0, 0)  # Default to black
+        else:
+            mission_title_color = (0, 0, 0)  # Default to black
+
+        # Add image1 from memory
+        if image1 is not None:
             image_table = doc.add_table(rows=1, cols=1)
             image_table.autofit = False
             image_table.columns[0].width = Inches(6.5)
@@ -364,39 +365,10 @@ Do not output your response with a '**Qualifications**' first. Do not break your
             paragraph = cell.paragraphs[0]
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = paragraph.add_run()
-            run.add_picture("Draft 5/image1.jpg", width=Inches(6.5))
+            run.add_picture(BytesIO(image1.getvalue()), width=Inches(6.5))
             
             section = doc.add_section()
             section.start_new_page = True
-
-        # Extract dominant color from logo
-        logo_img_path = "Draft 5/logo.png"
-        mission_title_color = (0, 0, 0)  # Default to black
-        try:
-            with PILImage.open(logo_img_path) as img:
-                img = img.convert('RGB')
-                img = img.resize((50, 50))
-                pixels = list(img.getdata())
-                most_common_colors = Counter(pixels).most_common(5)
-                
-                def is_white_grey_black(rgb):
-                    r, g, b = rgb
-                    if r > 240 and g > 240 and b > 240:  # White
-                        return True
-                    if r < 20 and g < 20 and b < 20:  # Black
-                        return True
-                    if abs(r-g) < 10 and abs(r-b) < 10 and abs(g-b) < 10 and 60 < r < 220:  # Grey
-                        return True
-                    return False
-                
-                for color, _ in most_common_colors:
-                    if not is_white_grey_black(color):
-                        mission_title_color = color
-                        break
-                else:
-                    mission_title_color = most_common_colors[0][0]
-        except Exception as e:
-            st.warning(f"Could not extract color from logo: {e}")
 
         # Add mission statement
         mission_title_para = doc.add_paragraph()
@@ -418,8 +390,9 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         mission_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
         mission_text_para.paragraph_format.line_spacing = 0.99
 
-        # Insert image2
-        insert_image_after(doc, 'Draft 5/image2', Inches(7))
+        # Insert image2 from memory
+        if image2 is not None:
+            insert_image_from_memory(doc, image2, Inches(7))
 
         # Add overview
         overview_title_para = doc.add_paragraph()
@@ -438,8 +411,9 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         overview_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
         overview_text_para.paragraph_format.line_spacing = 0.99
 
-        # Insert image3
-        insert_image_after(doc, 'Draft 5/image3', Inches(7))
+        # Insert image3 from memory
+        if image3 is not None:
+            insert_image_from_memory(doc, image3, Inches(7))
 
         # Add opportunities and challenges
         opps_title_para = doc.add_paragraph()
@@ -493,8 +467,9 @@ Do not output your response with a '**Qualifications**' first. Do not break your
             opps_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
             opps_text_para.paragraph_format.line_spacing = 0.99
 
-        # Insert image4
-        insert_image_after(doc, 'Draft 5/image4', Inches(7))
+        # Insert image4 from memory
+        if image4 is not None:
+            insert_image_from_memory(doc, image4, Inches(7))
 
         # Add qualifications
         quals_title_para = doc.add_paragraph()
@@ -534,6 +509,10 @@ Do not output your response with a '**Qualifications**' first. Do not break your
             quals_text_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
             quals_text_para.paragraph_format.line_spacing = 0.99
 
+        # Insert image5 from memory
+        if image5 is not None:
+            insert_image_from_memory(doc, image5, Inches(7))
+
         # Add learn more section
         learn_title_para = doc.add_paragraph()
         learn_title_run = learn_title_para.add_run('Learn More')
@@ -566,9 +545,6 @@ Do not output your response with a '**Qualifications**' first. Do not break your
             para = cell.paragraphs[0]
             add_hyperlink(para, url, website_name)
             para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-        # Insert image5 after the 'Learn More' section with links
-        insert_image_after(doc, 'Draft 5/image5', Inches(7))
 
         # Add to apply section
         apply_title_para = doc.add_paragraph()
@@ -627,32 +603,20 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         consultant_email_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
         consultant_email_para.paragraph_format.space_after = Pt(1)
 
-        # Add footer image
-        if os.path.exists("Draft 5/footer.png"):
-            footer_width = Inches(8.5 * 0.85)
-            for section in doc.sections:
-                footer = section.footer
-                for paragraph in footer.paragraphs:
-                    p = paragraph._element
-                    p.getparent().remove(p)
-                footer_para = footer.add_paragraph()
-                footer_run = footer_para.add_run()
-                footer_run.add_picture("Draft 5/footer.png", width=footer_width)
-                footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Save document to memory
+        docx_buffer = BytesIO()
+        doc.save(docx_buffer)
+        docx_buffer.seek(0)
 
-        # Set margins
-        for section in doc.sections:
-            section.left_margin = Inches(0.75)
-            section.right_margin = Inches(0.75)
+        # Convert to PDF in memory
+        pdf_buffer = BytesIO()
+        convert(docx_buffer, pdf_buffer)
+        pdf_buffer.seek(0)
 
-        # Save documents
-        doc.save('Draft 5/output.docx')
-        convert('Draft 5/output.docx', 'Draft 5/output.pdf')
-
-        return True, "Document generated successfully!"
+        return True, "Document generated successfully!", docx_buffer, pdf_buffer
 
     except Exception as e:
-        return False, f"Error generating document: {str(e)}"
+        return False, f"Error generating document: {str(e)}", None, None
 
 # Generate button
 if st.button("Generate Position Description"):
@@ -663,23 +627,21 @@ if st.button("Generate Position Description"):
         st.error("API keys not found in environment variables. Please ensure OPENAI_API_KEY, GOOGLE_API_KEY, and GOOGLE_SEARCH_ENGINE_ID are set.")
     else:
         with st.spinner("Generating document..."):
-            success, message = generate_document()
+            success, message, docx_buffer, pdf_buffer = generate_document()
             if success:
                 st.success(message)
                 # Provide download links
-                with open("Draft 5/output.docx", "rb") as docx_file:
-                    st.download_button(
-                        label="Download Word Document",
-                        data=docx_file,
-                        file_name="position_description.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                with open("Draft 5/output.pdf", "rb") as pdf_file:
-                    st.download_button(
-                        label="Download PDF Document",
-                        data=pdf_file,
-                        file_name="position_description.pdf",
-                        mime="application/pdf"
-                    )
+                st.download_button(
+                    label="Download Word Document",
+                    data=docx_buffer.getvalue(),
+                    file_name="position_description.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+                st.download_button(
+                    label="Download PDF Document",
+                    data=pdf_buffer.getvalue(),
+                    file_name="position_description.pdf",
+                    mime="application/pdf"
+                )
             else:
                 st.error(message) 
