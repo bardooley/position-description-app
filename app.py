@@ -459,34 +459,8 @@ Do not output your response with a '**Qualifications**' first. Do not break your
             section.start_new_page = True
             section.different_first_page_header_footer = False
             
-            # Add the regular footer to this section
-            regular_footer = section.footer
-            # Left-aligned text
-            footer_para = regular_footer.paragraphs[0]
-            footer_run = footer_para.add_run('The Search Group | Carney, Sandoe & Associates')
-            footer_run.font.size = Pt(12)
-            footer_run.font.name = 'Helvetica'
-            footer_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            
-            # Right-aligned page number
-            right_para = regular_footer.add_paragraph()
-            right_run = right_para.add_run('Page ')
-            right_run.font.size = Pt(12)
-            right_run.font.name = 'Helvetica'
-            right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            # Add page number field
-            fldChar1 = OxmlElement('w:fldChar')
-            fldChar1.set(qn('w:fldCharType'), 'begin')
-            right_run._r.append(fldChar1)
-            
-            instrText = OxmlElement('w:instrText')
-            instrText.set(qn('xml:space'), 'preserve')
-            instrText.text = "PAGE"
-            right_run._r.append(instrText)
-            
-            fldChar2 = OxmlElement('w:fldChar')
-            fldChar2.set(qn('w:fldCharType'), 'end')
-            right_run._r.append(fldChar2)
+            # Link to previous section's footer
+            section.footer.is_linked_to_previous = True
 
         # Add mission statement
         mission_title_para = doc.add_paragraph()
@@ -666,6 +640,7 @@ Do not output your response with a '**Qualifications**' first. Do not break your
 
         # Add to apply section
         apply_title_para = doc.add_paragraph()
+        apply_title_para.paragraph_format.space_before = Pt(24)
         apply_title_run = apply_title_para.add_run('To Apply')
         apply_title_run.bold = True
         apply_title_run.font.size = Pt(24)
@@ -700,6 +675,7 @@ Do not output your response with a '**Qualifications**' first. Do not break your
 
         # Add consultant information
         consultant_name_para = doc.add_paragraph()
+        consultant_name_para.paragraph_format.space_before = Pt(24)
         consultant_name_run = consultant_name_para.add_run(consultant_name)
         consultant_name_run.bold = True
         consultant_name_run.font.size = Pt(13)
