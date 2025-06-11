@@ -10,7 +10,6 @@ from PIL import Image as PILImage
 import openai
 import requests
 from bs4 import BeautifulSoup
-from docx2pdf import convert
 import PyPDF2
 from collections import Counter
 from io import BytesIO
@@ -67,10 +66,19 @@ google_cse_id = os.environ.get("GOOGLE_SEARCH_ENGINE_ID")
 def save_uploaded_file(uploaded_file, filename):
     """Save an uploaded file to the CS&A directory"""
     if uploaded_file is not None:
-        with open(f"CS&A/{filename}", "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        return True
-    return False
+        try:
+            # Create CS&A directory if it doesn't exist
+            os.makedirs("CS&A", exist_ok=True)
+            
+            # Save the file
+            file_path = os.path.join("CS&A", filename)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            return file_path
+        except Exception as e:
+            st.error(f"Error saving file: {str(e)}")
+            return None
+    return None
 
 def add_hyperlink(paragraph, url, text, color="0000FF", underline=True):
     """Add a hyperlink to a paragraph"""
@@ -117,7 +125,15 @@ def insert_image_from_memory(doc, image_data, width, after_para=None):
             else:
                 para = doc.add_paragraph()
             run = para.add_run()
-            run.add_picture(BytesIO(image_data.getvalue()), width=width)
+            # Save the image temporarily and use its path
+            temp_path = save_uploaded_file(image_data, f"temp_{image_data.name}")
+            if temp_path:
+                run.add_picture(temp_path, width=width)
+                # Clean up the temporary file
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             return para
         except Exception as e:
@@ -134,8 +150,14 @@ def generate_document():
             for page in pdf_reader.pages:
                 notes_content += page.extract_text()
 
-        # Set OpenAI API key
-        client = openai.OpenAI(api_key=openai_api_key)
+        # Set OpenAI API key with error handling
+        try:
+            client = openai.OpenAI(api_key=openai_api_key)
+            # Test the client with a simple request
+            client.models.list()
+        except Exception as e:
+            st.error(f"OpenAI client initialization error: {str(e)}")
+            return False, f"Error initializing OpenAI client: {str(e)}", None
 
         # Generate overview
         overview_response = client.chat.completions.create(
@@ -608,15 +630,10 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         doc.save(docx_buffer)
         docx_buffer.seek(0)
 
-        # Convert to PDF in memory
-        pdf_buffer = BytesIO()
-        convert(docx_buffer, pdf_buffer)
-        pdf_buffer.seek(0)
-
-        return True, "Document generated successfully!", docx_buffer, pdf_buffer
+        return True, "Document generated successfully!", docx_buffer
 
     except Exception as e:
-        return False, f"Error generating document: {str(e)}", None, None
+        return False, f"Error generating document: {str(e)}", None
 
 # Generate button
 if st.button("Generate Position Description"):
@@ -627,21 +644,15 @@ if st.button("Generate Position Description"):
         st.error("API keys not found in environment variables. Please ensure OPENAI_API_KEY, GOOGLE_API_KEY, and GOOGLE_SEARCH_ENGINE_ID are set.")
     else:
         with st.spinner("Generating document..."):
-            success, message, docx_buffer, pdf_buffer = generate_document()
+            success, message, docx_buffer = generate_document()
             if success:
                 st.success(message)
-                # Provide download links
+                # Provide download link for DOCX only
                 st.download_button(
                     label="Download Word Document",
                     data=docx_buffer.getvalue(),
                     file_name="position_description.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-                st.download_button(
-                    label="Download PDF Document",
-                    data=pdf_buffer.getvalue(),
-                    file_name="position_description.pdf",
-                    mime="application/pdf"
                 )
             else:
                 st.error(message) 
