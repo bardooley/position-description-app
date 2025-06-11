@@ -319,6 +319,56 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         section.top_margin = Inches(0.75)
         section.bottom_margin = Inches(0.75)
         
+        # Enable different first page header/footer
+        section.different_first_page_header_footer = True
+        
+        # Add footer to first page
+        try:
+            footer_path = os.path.join("CS&A", "footer.png")
+            with open(footer_path, 'rb') as f:
+                footer_data = f.read()
+            # Get the first page footer section
+            footer = section.first_page_footer
+            # Add the footer image
+            footer_para = footer.paragraphs[0]
+            footer_run = footer_para.add_run()
+            footer_run.add_picture(BytesIO(footer_data), width=Inches(7.2))
+            footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        except Exception as e:
+            st.warning(f"Could not add footer: {e}")
+
+        # Add 'hello' to footer of all other pages
+        try:
+            regular_footer = section.footer
+            # Left-aligned text
+            footer_para = regular_footer.paragraphs[0]
+            footer_run = footer_para.add_run('The Search Group | Carney, Sandoe & Associates')
+            footer_run.font.size = Pt(12)
+            footer_run.font.name = 'Helvetica'
+            footer_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Right-aligned page number
+            right_para = regular_footer.add_paragraph()
+            right_run = right_para.add_run('Page ')
+            right_run.font.size = Pt(12)
+            right_run.font.name = 'Helvetica'
+            right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            # Add page number field
+            fldChar1 = OxmlElement('w:fldChar')
+            fldChar1.set(qn('w:fldCharType'), 'begin')
+            right_run._r.append(fldChar1)
+            
+            instrText = OxmlElement('w:instrText')
+            instrText.set(qn('xml:space'), 'preserve')
+            instrText.text = "PAGE"
+            right_run._r.append(instrText)
+            
+            fldChar2 = OxmlElement('w:fldChar')
+            fldChar2.set(qn('w:fldCharType'), 'end')
+            right_run._r.append(fldChar2)
+        except Exception as e:
+            st.warning(f"Could not add regular footer: {e}")
+
         # Add header table
         header_table = doc.add_table(rows=1, cols=2)
         header_table.autofit = False
@@ -387,17 +437,6 @@ Do not output your response with a '**Qualifications**' first. Do not break your
                 mission_title_color = (0, 0, 0)  # Default to black
         else:
             mission_title_color = (0, 0, 0)  # Default to black
-
-        # Add footer to first page
-        try:
-            with open('footer.png', 'rb') as f:
-                footer_data = f.read()
-            footer_para = doc.add_paragraph()
-            footer_run = footer_para.add_run()
-            footer_run.add_picture(BytesIO(footer_data), width=Inches(7.2))
-            footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        except Exception as e:
-            st.warning(f"Could not add footer: {e}")
 
         # Add image1 from memory
         if image1 is not None:
