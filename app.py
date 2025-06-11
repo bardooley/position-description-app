@@ -140,6 +140,14 @@ def insert_image_from_memory(doc, image_data, width, after_para=None):
             st.error(f"Could not add image: {e}")
     return None
 
+def set_paragraph_format(paragraph):
+    """Set consistent paragraph formatting"""
+    paragraph.paragraph_format.left_indent = 0
+    paragraph.paragraph_format.right_indent = 0
+    paragraph.paragraph_format.space_before = Pt(0)
+    paragraph.paragraph_format.space_after = Pt(0)
+    return paragraph
+
 def generate_document():
     """Generate the position description document"""
     try:
