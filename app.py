@@ -21,6 +21,19 @@ st.set_page_config(
     layout="wide"
 )
 
+# Create a container for the header
+header_container = st.container()
+
+# Add title image to the right
+with header_container:
+    col1, col2 = st.columns([3, 1])  # Adjust ratio as needed
+    with col2:
+        try:
+            title_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "title.png")
+            st.image(title_path, width=200)
+        except Exception as e:
+            st.warning(f"Could not load title image: {e}")
+
 # Title and description
 st.title("Position Description Generator")
 st.markdown("""
