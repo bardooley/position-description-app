@@ -319,12 +319,14 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         section.top_margin = Inches(0.75)
         section.bottom_margin = Inches(0.75)
         
-        # Enable different first page header/footer
+        # Enable different first page header/footer only for first section
         section.different_first_page_header_footer = True
         
         # Add footer to first page
         try:
-            footer_path = os.path.join("CS&A", "footer.png")
+            # Get the directory where the script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            footer_path = os.path.join(script_dir, "footer.png")
             with open(footer_path, 'rb') as f:
                 footer_data = f.read()
             # Get the first page footer section
@@ -452,8 +454,39 @@ Do not output your response with a '**Qualifications**' first. Do not break your
             run = paragraph.add_run()
             run.add_picture(BytesIO(image1.getvalue()), width=Inches(6.5))
             
+            # Create new section without different first page
             section = doc.add_section()
             section.start_new_page = True
+            section.different_first_page_header_footer = False
+            
+            # Add the regular footer to this section
+            regular_footer = section.footer
+            # Left-aligned text
+            footer_para = regular_footer.paragraphs[0]
+            footer_run = footer_para.add_run('The Search Group | Carney, Sandoe & Associates')
+            footer_run.font.size = Pt(12)
+            footer_run.font.name = 'Helvetica'
+            footer_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            # Right-aligned page number
+            right_para = regular_footer.add_paragraph()
+            right_run = right_para.add_run('Page ')
+            right_run.font.size = Pt(12)
+            right_run.font.name = 'Helvetica'
+            right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            # Add page number field
+            fldChar1 = OxmlElement('w:fldChar')
+            fldChar1.set(qn('w:fldCharType'), 'begin')
+            right_run._r.append(fldChar1)
+            
+            instrText = OxmlElement('w:instrText')
+            instrText.set(qn('xml:space'), 'preserve')
+            instrText.text = "PAGE"
+            right_run._r.append(instrText)
+            
+            fldChar2 = OxmlElement('w:fldChar')
+            fldChar2.set(qn('w:fldCharType'), 'end')
+            right_run._r.append(fldChar2)
 
         # Add mission statement
         mission_title_para = doc.add_paragraph()
