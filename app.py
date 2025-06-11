@@ -313,6 +313,11 @@ Do not output your response with a '**Qualifications**' first. Do not break your
 
         # Create document
         doc = Document()
+        section = doc.sections[0]
+        section.left_margin = Inches(0.75)
+        section.right_margin = Inches(0.75)
+        section.top_margin = Inches(0.75)
+        section.bottom_margin = Inches(0.75)
         
         # Add header table
         header_table = doc.add_table(rows=1, cols=2)
