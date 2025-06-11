@@ -1,8 +1,0 @@
-streamlit
-python-docx
-docx2pdf
-openai
-Pillow==9.5.0
-beautifulsoup4
-requests
-PyPDF2
