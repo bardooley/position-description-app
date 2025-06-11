@@ -30,7 +30,7 @@ with header_container:
     with col2:
         try:
             title_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "title.png")
-            st.image(title_path, width=200)
+            st.image(title_path, width=400)
         except Exception as e:
             st.warning(f"Could not load title image: {e}")
 
