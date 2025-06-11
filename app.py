@@ -388,6 +388,17 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         else:
             mission_title_color = (0, 0, 0)  # Default to black
 
+        # Add footer to first page
+        try:
+            with open('footer.png', 'rb') as f:
+                footer_data = f.read()
+            footer_para = doc.add_paragraph()
+            footer_run = footer_para.add_run()
+            footer_run.add_picture(BytesIO(footer_data), width=Inches(7.2))
+            footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        except Exception as e:
+            st.warning(f"Could not add footer: {e}")
+
         # Add image1 from memory
         if image1 is not None:
             image_table = doc.add_table(rows=1, cols=1)
