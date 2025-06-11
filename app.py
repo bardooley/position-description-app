@@ -53,6 +53,13 @@ with col1:
     website = st.text_input("Website")
     date = st.text_input("Start Date (e.g., July 2026)")
     mission_statement = st.text_area("Mission Statement")
+    
+    # Add title image below mission statement
+    try:
+        title_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "title.png")
+        st.image(title_path, width=400)
+    except Exception as e:
+        st.warning(f"Could not load title image: {e}")
 
 with col2:
     # Consultant Information
