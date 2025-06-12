@@ -18,7 +18,7 @@ from openai import OpenAI
 
 # Set page config
 st.set_page_config(
-    page_title="Position Description Generator",
+    page_title="Carney, Sandoe, & Associates Position Description Generator",
     page_icon="📝",
     layout="wide"
 )
@@ -183,7 +183,7 @@ def generate_document():
 
         # Generate overview
         overview_response = client.chat.completions.create(
-            model="gpt-4.1-nano",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": f"""You are an experienced HR professional crafting the 'Overview' section of a Position Description for a leadership role at an independent school. This is the first section job applicants will see.
 
@@ -212,7 +212,7 @@ Amid new buildings and deepened partnerships with institutions like Harvard and 
 
         # Generate opportunities and challenges
         opps_response = client.chat.completions.create(
-            model="gpt-4.1-nano",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": f"""You are an experienced HR professional drafting the 'Opportunities and Challenges' section of a Position Description for a school leadership role. This section highlights the key strategic priorities, opportunities, and leadership challenges facing the school. It is meant to be clear, forward-looking, and grounded in the school's current context.
 
@@ -257,7 +257,7 @@ Key opportunities and challenges include:
 
         # Generate qualifications
         quals_response = client.chat.completions.create(
-            model="gpt-4.1-nano",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": f"""You are an experienced HR professional writing the 'Qualifications' section of a Position Description for a leadership role at an independent or international school.
 
