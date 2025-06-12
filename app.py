@@ -13,7 +13,6 @@ from bs4 import BeautifulSoup
 import PyPDF2
 from collections import Counter
 from io import BytesIO
-from openai import OpenAI
 
 # Set page config
 st.set_page_config(
