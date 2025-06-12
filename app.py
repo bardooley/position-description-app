@@ -168,9 +168,8 @@ def generate_document():
 
         # Set OpenAI API key with error handling
         try:
-            client = OpenAI(api_key=openai_api_key)
-            # Test the client with a simple request
-            client.models.list()
+            openai.api_key = openai_api_key
+            openai.models.list()
         except Exception as e:
             st.error(f"OpenAI client initialization error: {str(e)}")
             return False, f"Error initializing OpenAI client: {str(e)}", None, None
@@ -183,7 +182,7 @@ def generate_document():
                 notes_content += page.extract_text()
 
         # Generate overview
-        overview_response = client.chat.completions.create(
+        overview_response = openai.chat.completions.create(
             model="gpt-4.1-nano",
             messages=[
                 {"role": "system", "content": f"""You are an experienced HR professional crafting the 'Overview' section of a Position Description for a leadership role at an independent school. This is the first section job applicants will see.
@@ -212,7 +211,7 @@ Amid new buildings and deepened partnerships with institutions like Harvard and 
         overview = overview_response.choices[0].message.content
 
         # Generate opportunities and challenges
-        opps_response = client.chat.completions.create(
+        opps_response = openai.chat.completions.create(
             model="gpt-4.1-nano",
             messages=[
                 {"role": "system", "content": f"""You are an experienced HR professional drafting the 'Opportunities and Challenges' section of a Position Description for a school leadership role. This section highlights the key strategic priorities, opportunities, and leadership challenges facing the school. It is meant to be clear, forward-looking, and grounded in the school's current context.
@@ -257,7 +256,7 @@ Key opportunities and challenges include:
         oppChallenges = opps_response.choices[0].message.content
 
         # Generate qualifications
-        quals_response = client.chat.completions.create(
+        quals_response = openai.chat.completions.create(
             model="gpt-4.1-nano",
             messages=[
                 {"role": "system", "content": f"""You are an experienced HR professional writing the 'Qualifications' section of a Position Description for a leadership role at an independent or international school.
