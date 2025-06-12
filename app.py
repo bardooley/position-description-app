@@ -172,7 +172,7 @@ def generate_document():
             client.models.list()
         except Exception as e:
             st.error(f"OpenAI client initialization error: {str(e)}")
-            return False, f"Error initializing OpenAI client: {str(e)}", None
+            return False, f"Error initializing OpenAI client: {str(e)}", None, None
 
         # Generate overview
         overview_response = client.chat.completions.create(
@@ -709,10 +709,10 @@ Do not output your response with a '**Qualifications**' first. Do not break your
         doc.save(docx_buffer)
         docx_buffer.seek(0)
 
-        return True, "Document generated successfully!", docx_buffer
+        return True, "Document generated successfully!", docx_buffer, f"{school_name} Position Description"
 
     except Exception as e:
-        return False, f"Error generating document: {str(e)}", None
+        return False, f"Error generating document: {str(e)}", None, None
 
 # Generate button
 if st.button("Generate Position Description"):
@@ -723,14 +723,14 @@ if st.button("Generate Position Description"):
         st.error("API keys not found in environment variables. Please ensure OPENAI_API_KEY, GOOGLE_API_KEY, and GOOGLE_SEARCH_ENGINE_ID are set.")
     else:
         with st.spinner("Generating document..."):
-            success, message, docx_buffer = generate_document()
+            success, message, docx_buffer, doc_title = generate_document()
             if success:
                 st.success(message)
                 # Provide download link for DOCX only
                 st.download_button(
                     label="Download Word Document",
                     data=docx_buffer.getvalue(),
-                    file_name="position_description.docx",
+                    file_name=f"{doc_title}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             else:
