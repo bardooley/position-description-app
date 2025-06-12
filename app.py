@@ -167,10 +167,8 @@ def generate_document():
 
         # Set OpenAI API key with error handling
         try:
-            client = openai.OpenAI(
-                api_key=openai_api_key,
-                base_url="https://api.openai.com/v1"
-            )
+            openai.api_key = openai_api_key
+            client = openai.Client(api_key=openai_api_key)
             # Test the client with a simple request
             client.models.list()
         except Exception as e:
