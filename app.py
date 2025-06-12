@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 import PyPDF2
 from collections import Counter
 from io import BytesIO
+from openai import OpenAI
 
 # Set page config
 st.set_page_config(
@@ -167,13 +168,19 @@ def generate_document():
 
         # Set OpenAI API key with error handling
         try:
-            openai.api_key = openai_api_key
-            client = openai.Client(api_key=openai_api_key)
+            client = OpenAI(api_key=openai_api_key)
             # Test the client with a simple request
             client.models.list()
         except Exception as e:
             st.error(f"OpenAI client initialization error: {str(e)}")
             return False, f"Error initializing OpenAI client: {str(e)}", None, None
+
+        # Read notes content from memory
+        notes_content = ""
+        if notes_file is not None:
+            pdf_reader = PyPDF2.PdfReader(BytesIO(notes_file.getvalue()))
+            for page in pdf_reader.pages:
+                notes_content += page.extract_text()
 
         # Generate overview
         overview_response = client.chat.completions.create(
