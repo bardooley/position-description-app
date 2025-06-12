@@ -1,0 +1,8 @@
+[theme]
+base = "dark"
+primaryColor = "#0097a7"
+backgroundColor = "#06070a"
+
+[server]
+enableCORS = false
+enableXsrfProtection = true 
